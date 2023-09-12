@@ -10,19 +10,16 @@ import (
 func main() {
 	r := gin.Default()
 
-	// Endpoint
 	r.POST("/calculate-sla", CalculateSLA)
 
 	r.Run(":8080")
 }
 
-// RequestPayload
 type RequestPayload struct {
 	CreateTime time.Time `json:"create_time"`
 	SLARef     string    `json:"sla_ref"`
 }
 
-// Response
 type ResponsePayload struct {
 	SLA50Percentage  float64          `json:"sla_50_percentage"`
 	SLA75Percentage  float64          `json:"sla_75_percentage"`
@@ -30,7 +27,6 @@ type ResponsePayload struct {
 	Details          map[string]int64 `json:"details"`
 }
 
-// handler untuk menghitung SLA
 func CalculateSLA(c *gin.Context) {
 	var request RequestPayload
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -47,10 +43,8 @@ func CalculateSLA(c *gin.Context) {
 	slaHours := slaRules[request.SLARef]
 	endTime := request.CreateTime.Add(time.Duration(slaHours) * time.Hour)
 
-	// Hitung detail
 	details := calculateSLADetails(request.CreateTime, endTime)
 
-	// Hitung persentase
 	sla50Percentage := calculateSLAPercentage(request.CreateTime, endTime, 0.5)
 	sla75Percentage := calculateSLAPercentage(request.CreateTime, endTime, 0.75)
 	sla100Percentage := calculateSLAPercentage(request.CreateTime, endTime, 1.0)
@@ -68,14 +62,11 @@ func CalculateSLA(c *gin.Context) {
 func calculateSLADetails(startTime, endTime time.Time) map[string]int64 {
 	details := make(map[string]int64)
 
-	// Hari kerja adalah Senin hingga Jumat
 	for day := startTime; day.Before(endTime); day = day.Add(24 * time.Hour) {
 		if day.Weekday() == time.Saturday || day.Weekday() == time.Sunday {
-			// Hari Sabtu dan Minggu tidak termasuk dalam hari kerja
 			continue
 		}
 
-		// Hitung jam kerja dalam sehari
 		workStartTime := time.Date(day.Year(), day.Month(), day.Day(), 9, 0, 0, 0, time.UTC)
 		workEndTime := time.Date(day.Year(), day.Month(), day.Day(), 18, 0, 0, 0, time.UTC)
 		breakStartTime := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, time.UTC)
@@ -83,7 +74,6 @@ func calculateSLADetails(startTime, endTime time.Time) map[string]int64 {
 
 		workHours := calculateWorkHoursInDay(startTime, endTime, workStartTime, workEndTime, breakStartTime, breakEndTime)
 
-		// Simpan detail perhitungan SLA untuk hari ini
 		details[day.Format("02_Jan_06")] = workHours
 	}
 
@@ -91,7 +81,6 @@ func calculateSLADetails(startTime, endTime time.Time) map[string]int64 {
 }
 
 func calculateWorkHoursInDay(startTime, endTime, workStartTime, workEndTime, breakStartTime, breakEndTime time.Time) int64 {
-	// Batasi waktu kerja dengan waktu mulai dan waktu selesai
 	if startTime.Before(workStartTime) {
 		startTime = workStartTime
 	}
@@ -99,10 +88,8 @@ func calculateWorkHoursInDay(startTime, endTime, workStartTime, workEndTime, bre
 		endTime = workEndTime
 	}
 
-	// Hitung waktu kerja dalam jam
 	workHours := int64(endTime.Sub(startTime).Hours())
 
-	// Mengurangkan waktu istirahat dari waktu kerja
 	if startTime.Before(breakStartTime) && endTime.After(breakEndTime) {
 		workHours -= int64(breakEndTime.Sub(breakStartTime).Hours())
 	}
